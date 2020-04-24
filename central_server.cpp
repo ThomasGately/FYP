@@ -37,8 +37,14 @@
 #include <vector>
 #include <thread>
 
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+	#include <openssl/crypto.h>
+
+int testtest = 0;
 
 #define FAIL    -1
+
 
 int send_message(int port, std::string hostname, std::string message);
 
@@ -77,7 +83,7 @@ SSL_CTX* InitCTX(void) {
 
 	OpenSSL_add_all_algorithms();  /* Load cryptos, et.al. */
 	SSL_load_error_strings();   /* Bring in and register error messages */
-	method = TLSv1_2_client_method();  /* Create new client-method instance */
+	method = TLS_client_method();  /* Create new client-method instance */
 	ctx = SSL_CTX_new(method);   /* Create new context */
 	if ( ctx == NULL )
 	{
@@ -158,6 +164,8 @@ struct testing_server {
 
 	void setup_testing_server() {
 
+		port = 6969;
+
 		name.push_back("ubuntu RPI 1");
 		name.push_back("ubuntu RPI 2");
 		name.push_back("ubuntu RPI 3");
@@ -185,6 +193,14 @@ struct testing_server {
 	}
 };
 
+void test_printf() {
+
+	printf("grim -- %d\n", testtest);
+
+	testtest++;
+
+}
+
 int send_message(int port, std::string hostname, std::string message) {
 
 	SSL_CTX *ctx;
@@ -193,14 +209,27 @@ int send_message(int port, std::string hostname, std::string message) {
 	char buf[1024];
 	int bytes;
 
+		test_printf();
+
+
 	SSL_library_init();
+
+	test_printf();
+
+	printf("%s --- %d -- %s\n", hostname.c_str(), port, message.c_str());
 
 	ctx = InitCTX();
 	server = OpenConnection(hostname.c_str(), port);
+		test_printf();
+
 	//create new SSL connection state 
 	ssl = SSL_new(ctx);
+		test_printf();
+
 	//attach the socket descriptor
 	SSL_set_fd(ssl, server);
+		test_printf();
+
 	//perform the connection
 	if (SSL_connect(ssl) == FAIL) {
 		ERR_print_errors_fp(stderr);
@@ -222,6 +251,134 @@ int send_message(int port, std::string hostname, std::string message) {
 	SSL_CTX_free(ctx);
 	return 0;
 
+}
+
+
+	static CRYPTO_ONCE once = CRYPTO_ONCE_STATIC_INIT;
+	static CRYPTO_RWLOCK *wr_lock;
+	static CRYPTO_RWLOCK *re_lock;
+
+
+static void ossl_init_base(void) {
+
+    wr_lock = CRYPTO_THREAD_lock_new();
+		SSL_library_init();
+
+}
+
+
+static void myinit(void) {
+
+	SSL_library_init();		
+	wr_lock = CRYPTO_THREAD_lock_new();
+	re_lock = CRYPTO_THREAD_lock_new();
+}
+
+static int my_wr_lock(void) {
+
+	if (!CRYPTO_THREAD_run_once(&once, myinit) || wr_lock == NULL)
+		return 0;
+
+	return CRYPTO_THREAD_write_lock(wr_lock);
+}
+
+static int my_re_lock(void) {
+
+	if (!CRYPTO_THREAD_run_once(&once, myinit) || re_lock == NULL)
+		return 0;
+
+	return CRYPTO_THREAD_read_lock(re_lock);
+}
+
+static int my_wr_unlock(void) {
+	return CRYPTO_THREAD_unlock(wr_lock);
+}
+
+
+static int my_re_unlock(void) {
+	return CRYPTO_THREAD_unlock(re_lock);
+}
+
+int serialized(int port, std::string hostname, std::string message) {
+	
+	int ret = 0;
+
+
+	if (my_re_lock() && my_wr_lock()) {
+			SSL_CTX *ctx;
+	SSL *ssl;
+		int server;
+		char buf[1024];
+		int bytes;
+
+		printf("%s --- %d -- %s\n", hostname.c_str(), port, message.c_str());
+
+		ctx = InitCTX();
+		server = OpenConnection(hostname.c_str(), port);
+
+		//create new SSL connection state 
+		ssl = SSL_new(ctx);
+
+		//attach the socket descriptor
+		SSL_set_fd(ssl, server);
+
+		//perform the connection
+		if (SSL_connect(ssl) == FAIL) {
+			ERR_print_errors_fp(stderr);
+			printf("asdasd %d\n", 1);
+		}
+		else {
+			printf("Connected with %s encryption\n", SSL_get_cipher(ssl));
+			//encrypt & send message
+			SSL_write(ssl, message.c_str(), strlen(message.c_str()));
+			//get reply & decrypt
+			bytes = SSL_read(ssl, buf, sizeof(buf));
+			buf[bytes] = 0;
+			printf("Received: \"%s\"\n", buf);
+			//release connection state
+			SSL_free(ssl);
+		}
+		//close socket
+		close(server);
+		//release context
+		SSL_CTX_free(ctx);
+	}
+
+	my_wr_unlock();
+	my_re_unlock();
+	return ret;
+}
+
+int serialized2(int port, std::string hostname, std::string message) {
+
+	int sock = 0, valread; 
+    struct sockaddr_in serv_addr; 
+    char buffer[1024] = {0}; 
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+    { 
+        printf("\n Socket creation error \n"); 
+        return -1; 
+    } 
+   
+    serv_addr.sin_family = AF_INET; 
+    serv_addr.sin_port = htons(port); 
+       
+    // Convert IPv4 and IPv6 addresses from text to binary form 
+    if(inet_pton(AF_INET, hostname.c_str(), &serv_addr.sin_addr)<=0)  
+    { 
+        printf("\nInvalid address/ Address not supported \n"); 
+        return -1; 
+    } 
+   
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+    { 
+        printf("\nConnection Failed \n"); 
+        return -1; 
+    } 
+    send(sock , message.c_str(), strlen(message.c_str()) , 0 ); 
+    valread = read(sock , buffer, 1024); 
+    printf("%s\n", buffer); 
+    return 0; 
 }
 /*
 int send_message(int server, struct testing_server sever, std::string message) {
@@ -272,7 +429,7 @@ void run_tests() {
 
 		std::stringstream ss;
 		ss << "3 project/build/" << tests.front() << " 0.1 1";
-		send_message(6969, "172.17.0.1", ss.str());
+		send_message(6969, "192.168.1.34", ss.str());
 		tests.pop(); 
 	}
 }
@@ -297,25 +454,29 @@ void run_tests_thread() {
 		std::vector<std::thread> thread_servers;
 		std::stringstream ss;
 
-		ss << "3 project/build/" << tests.front() << " 0.1 1";
-		for(int i = 0; i < 4; ++i) {
+		for(int i = 0; i < 2; ++i) {
 
 			ss << "3 project/build/" << tests.front() << " 0.1 1";
-			//send_message(i, servers, ss.str());
-			std::string t1 = "qwe";
-			thread_servers.push_back(std::thread(send_message, servers.port, servers.hostname[i], ss.str()));
+			thread_servers.push_back(std::thread(serialized2, servers.port, servers.hostname[i], ss.str()));
 			tests.pop();
 			ss.str(std::string());
 		}
 
 		for(auto& t : thread_servers)
             t.join();
+        thread_servers.clear();
+        sleep(.5);
 	}
 }
 
+
+
 int main(int count, char *strings[]) {
 
-	run_tests();
+
+	//	send_message(6969, "172.17.0.1", "0 ls -la");
+
+	run_tests_thread();
 
 /*
 	testing_server servers;

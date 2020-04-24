@@ -7,7 +7,7 @@
 
 CC = gcc                        # compiler to use
 
-all: test_server central_server test
+all: test_server test openssl central_server
 
 test_server: test_server.cpp
 	@echo "------ test_server.cpp ------\n"
@@ -20,6 +20,10 @@ central_server: central_server.cpp
 test: test.cpp
 	@echo "------ test.cpp ------\n"
 	gcc -Wall -o build/test test.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -lzip -pthread
+
+openssl: openssl.cpp
+	@echo "------ openssl.cpp ------\n"
+	gcc -Wall -o build/openssl openssl.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -lzip -pthread
 
 clean:
 	@echo "Cleaning up..."
