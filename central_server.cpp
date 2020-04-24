@@ -157,24 +157,36 @@ int temp(int count, char *strings[]) {
 
 struct testing_server {
 
-	int port;
+	std::vector<int> port;
 	std::vector<std::string> name;
 	std::vector<std::string> hostname;
 	std::vector<std::string> username;
 
 	void setup_testing_server() {
 
-		port = 6969;
+		port.push_back(7000);
+		port.push_back(7001);
+		port.push_back(7002);
+		port.push_back(7003);
 
 		name.push_back("ubuntu RPI 1");
 		name.push_back("ubuntu RPI 2");
 		name.push_back("ubuntu RPI 3");
 		name.push_back("ubuntu RPI 4");
 
+		hostname.push_back("172.17.0.1");
+		hostname.push_back("172.17.0.1");
+		hostname.push_back("172.17.0.1");
+		hostname.push_back("172.17.0.1");
+
+		/*
+
 		hostname.push_back("192.168.1.34");
 		hostname.push_back("192.168.1.33");
 		hostname.push_back("192.168.1.32");
 		hostname.push_back("192.168.1.21");
+
+		*/
 
 		username.push_back("ubuntu");
 		username.push_back("ubuntu");
@@ -302,6 +314,7 @@ static int my_re_unlock(void) {
 int serialized(int port, std::string hostname, std::string message) {
 	
 	int ret = 0;
+		printf("%s --- %d -- %s\n", hostname.c_str(), port, message.c_str());
 
 
 	if (my_re_lock() && my_wr_lock()) {
@@ -311,7 +324,6 @@ int serialized(int port, std::string hostname, std::string message) {
 		char buf[1024];
 		int bytes;
 
-		printf("%s --- %d -- %s\n", hostname.c_str(), port, message.c_str());
 
 		ctx = InitCTX();
 		server = OpenConnection(hostname.c_str(), port);
@@ -374,9 +386,15 @@ int serialized2(int port, std::string hostname, std::string message) {
     { 
         printf("\nConnection Failed \n"); 
         return -1; 
-    } 
+    }
+    printf("\ngrim \n"); 
+
     send(sock , message.c_str(), strlen(message.c_str()) , 0 ); 
+    printf("\nkek 1\n"); 
+
     valread = read(sock , buffer, 1024); 
+        printf("\nkek 2 \n"); 
+
     printf("%s\n", buffer); 
     return 0; 
 }
@@ -429,7 +447,7 @@ void run_tests() {
 
 		std::stringstream ss;
 		ss << "3 project/build/" << tests.front() << " 0.1 1";
-		send_message(6969, "192.168.1.34", ss.str());
+		serialized2(6969, "172.17.0.1", ss.str());
 		tests.pop(); 
 	}
 }
@@ -454,10 +472,10 @@ void run_tests_thread() {
 		std::vector<std::thread> thread_servers;
 		std::stringstream ss;
 
-		for(int i = 0; i < 2; ++i) {
+		for(int i = 0; i < 4; ++i) {
 
 			ss << "3 project/build/" << tests.front() << " 0.1 1";
-			thread_servers.push_back(std::thread(serialized2, servers.port, servers.hostname[i], ss.str()));
+			thread_servers.push_back(std::thread(serialized, servers.port[i], servers.hostname[i], ss.str()));
 			tests.pop();
 			ss.str(std::string());
 		}
@@ -476,8 +494,8 @@ int main(int count, char *strings[]) {
 
 	//	send_message(6969, "172.17.0.1", "0 ls -la");
 
+	//run_tests_thread();
 	run_tests_thread();
-
 /*
 	testing_server servers;
 	servers.setup_testing_server();
