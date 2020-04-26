@@ -50,7 +50,7 @@ inline void logger(const char *fmt, ...){
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
-    string filePath = "./logs/log_"+get_current_date_time("date") +" .txt";
+    string filePath = "./logs/log_"+get_current_date_time("date") +" .log";
     string now = get_current_date_time("now");
     ofstream ofst(filePath.c_str(), std::ios_base::out | std::ios_base::app );
 
@@ -65,7 +65,7 @@ inline void logger(const char *fmt, ...){
 inline void openssl_logger(){
 
     FILE* file;
-    string filePath = "./logs/log_"+get_current_date_time("date")+".txt";
+    string filePath = "./logs/log_"+get_current_date_time("date")+".log";
     file = fopen(filePath.c_str(), "r");
 
     if (DEBUG) {
