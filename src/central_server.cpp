@@ -467,16 +467,19 @@ int main(int count, char *strings[]) {
 
 printf("serialized, %d , %s\n", atoi(strings[1]), strings[2]);
 
-	serialized(7000, "192.168.1.32", "0 ls -la");
-	serialized(7001, "192.168.1.30", "0 ls -la");
-	serialized(7002, "192.168.1.33", "0 ls -la");
-	serialized(7006, "192.168.1.34", "0 ls -la");
+	serialized(atoi(strings[1]), strings[2], "0 ls -la");
+
+
+	//serialized(7000, "192.168.1.32", "0 ls -la");
+	//serialized(7001, "192.168.1.30", "0 ls -la");
+	//serialized(7002, "192.168.1.33", "0 ls -la");
+	//serialized(7006, "192.168.1.34", "0 ls -la");
 
 	//run_tests(0);
 	//run_tests(1);
 	//run_tests(2);
 	//run_tests(3);
-	run_tests_thread();
+	//run_tests_thread();
 	//run_tests_thread();
 /*
 	testing_server servers;
