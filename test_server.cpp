@@ -19,11 +19,63 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <stdarg.h>
+#include <stdio.h> 
 
-#define FAIL    -1
+using namespace std;
 
-int OpenListener(int port)
-{   int sd;
+#define DEBUG 0
+#define FAIL 1
+
+inline string get_current_date_time(string s){
+    time_t now = time(0);
+    struct tm  tstruct;
+    char  buf[80];
+    tstruct = *localtime(&now);
+
+    if(s=="now")
+        strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
+    else if(s=="date")
+        strftime(buf, sizeof(buf), "%Y-%m-%d", &tstruct);
+
+    return string(buf);
+};
+
+inline void logger(const char *fmt, ...){
+
+    char buffer[4096];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    string filePath = "./logs/log_"+get_current_date_time("date")+".txt";
+    string now = get_current_date_time("now");
+    ofstream ofst(filePath.c_str(), std::ios_base::out | std::ios_base::app );
+
+    if (DEBUG) 
+        cout << now << '\t' << buffer << '\n';
+
+    ofst << now << '\t' << buffer << '\n';
+    ofst.close();
+}
+
+inline void openssl_logger(){
+
+    FILE* file;
+    string filePath = "./logs/log_"+get_current_date_time("date")+".txt";
+    file = fopen(filePath.c_str(), "r");
+
+    if (DEBUG) {
+        ERR_print_errors_fp(stderr);
+    }
+    else {
+        ERR_print_errors_fp(file);
+    }
+}
+
+int open_listener(int port) {
+
+    int sd;
     struct sockaddr_in addr;
 
     sd = socket(PF_INET, SOCK_STREAM, 0);
@@ -31,88 +83,86 @@ int OpenListener(int port)
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
-    if ( bind(sd, (struct sockaddr*)&addr, sizeof(addr)) != 0 )
-    {
-        perror("can't bind port");
+
+    if (bind(sd, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+
+        openssl_logger();
         abort();
     }
-    if ( listen(sd, 10) != 0 )
-    {
-        perror("Can't configure listening port");
+    if (listen(sd, 10) != 0) {
+
+        openssl_logger();
         abort();
     }
     return sd;
 }
 
-int isRoot()
-{
-    if (getuid() != 0)
-    {
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
+int is_root() {
 
+    return getuid() ? 0 : 1;
 }
-SSL_CTX* InitServerCTX(void)
-{   
+
+SSL_CTX* init_server_CTX(void) {
+
     const SSL_METHOD *method;
     SSL_CTX *ctx;
 
-    OpenSSL_add_all_algorithms();  /* load & register all cryptos, etc. */
-    SSL_load_error_strings();   /* load all error messages */
-    method = TLSv1_2_server_method();  /* create new server-method instance */
-    ctx = SSL_CTX_new(method);   /* create new context from method */
-    if ( ctx == NULL )
-    {
-        ERR_print_errors_fp(stderr);
+    /* load all error messages */
+    OpenSSL_add_all_algorithms();
+    /* create new server-method instance */
+    SSL_load_error_strings();
+    method = TLSv1_2_server_method();
+    /* create new context from method */
+    ctx = SSL_CTX_new(method);
+    if ( ctx == NULL ) {
+        openssl_logger();
         abort();
     }
     return ctx;
 }
 
-void LoadCertificates(SSL_CTX* ctx, char* CertFile, char* KeyFile)
-{
+void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile) {
+
     /* set the local certificate from CertFile */
-    if ( SSL_CTX_use_certificate_file(ctx, CertFile, SSL_FILETYPE_PEM) <= 0 )
-    {
-        ERR_print_errors_fp(stderr);
+    if (SSL_CTX_use_certificate_file(ctx, CertFile, SSL_FILETYPE_PEM) <= 0) {
+
+        openssl_logger();
         abort();
     }
     /* set the private key from KeyFile (may be the same as CertFile) */
-    if ( SSL_CTX_use_PrivateKey_file(ctx, KeyFile, SSL_FILETYPE_PEM) <= 0 )
-    {
-        ERR_print_errors_fp(stderr);
+    if (SSL_CTX_use_PrivateKey_file(ctx, KeyFile, SSL_FILETYPE_PEM) <= 0) {
+
+        openssl_logger();
         abort();
     }
     /* verify private key */
-    if ( !SSL_CTX_check_private_key(ctx) )
-    {
-        fprintf(stderr, "Private key does not match the public certificate\n");
+    if (!SSL_CTX_check_private_key(ctx)) {
+
+        logger("Private key does not match the public certificate");
         abort();
     }
 }
 
-void ShowCerts(SSL* ssl)
-{   X509 *cert;
+void show_certs(SSL* ssl) {
+
+    X509 *cert;
     char *line;
 
-    cert = SSL_get_peer_certificate(ssl); /* Get certificates (if available) */
-    if ( cert != NULL )
-    {
-        printf("Server certificates:\n");
+    /* Get certificates (if available) */
+    cert = SSL_get_peer_certificate(ssl);
+    if (cert != NULL) {
+
+        logger("Server certificates:");
         line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
-        printf("Subject: %s\n", line);
+        logger("Subject: %s", line);
         free(line);
         line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
-        printf("Issuer: %s\n", line);
+        logger("Issuer: %s", line);
         free(line);
         X509_free(cert);
     }
     else
-        printf("No certificates.\n");
+        logger("No certificates.\n");
 }
 
 std::string exec_cmd(std::string cmd) {
@@ -126,7 +176,7 @@ std::string exec_cmd(std::string cmd) {
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
         result += buffer.data();
     }
-    printf("%s \n", result.c_str());
+    logger("\n %s \n", result.c_str());
     return result;
 }
 
@@ -186,21 +236,21 @@ std::string exec_task(std::string input) {
 }
 
 
-void Servlet(SSL* ssl) /* Serve the connection -- threadable */
+void servlet(SSL* ssl) /* Serve the connection -- threadable */
 {   char buf[1024];
     std::string reply;
     int sd, bytes;
 
-    if ( SSL_accept(ssl) == FAIL )     /* do SSL-protocol accept */
+    if (SSL_accept(ssl) == FAIL)     /* do SSL-protocol accept */
         ERR_print_errors_fp(stderr);
     else
     {
-        ShowCerts(ssl);        /* get any certificates */
+        show_certs(ssl);        /* get any certificates */
         bytes = SSL_read(ssl, buf, sizeof(buf)); /* get request */
         if ( bytes > 0 )
         {
             buf[bytes] = 0;
-            printf("central_server msg: \"%s\"\n", buf);
+            logger("central_server msg: \"%s\"\n", buf);
             reply = exec_task(std::string(buf));
             SSL_write(ssl, reply.c_str(), strlen(reply.c_str())); /* send reply */
         }
@@ -218,95 +268,33 @@ int main(int count, char *strings[]) {
     int server;
     char *portnum;
 
-    if(!isRoot())
+    if(!is_root())
     {
-        printf("This program must be run as root/sudo user!!\n");
+        logger("This program must be run as root/sudo user!!\n");
         exit(0);
     }
     if ( count != 2 )
     {
-        printf("Usage: %s <portnum>\n", strings[0]);
+        logger("Usage: %s <portnum>\n", strings[0]);
         exit(0);
     }
     SSL_library_init();
 
     portnum = strings[1];
-    ctx = InitServerCTX();        /* initialize SSL */
-    LoadCertificates(ctx, "mycert.pem", "mycert.pem"); /* load certs */
-    server = OpenListener(atoi(portnum));    /* create server socket */
+    ctx = init_server_CTX();        /* initialize SSL */
+    load_certificates(ctx, "mycert.pem", "mycert.pem"); /* load certs */
+    server = open_listener(atoi(portnum));    /* create server socket */
     while (1)
     {   struct sockaddr_in addr;
         socklen_t len = sizeof(addr);
         SSL *ssl;
 
         int client = accept(server, (struct sockaddr*)&addr, &len);  /* accept connection as usual */
-        printf("Connection: %s:%d\n",inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+        logger("Connection: %s:%d\n",inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
         ssl = SSL_new(ctx);              /* get new SSL state with context */
         SSL_set_fd(ssl, client);      /* set connection socket to SSL state */
-        Servlet(ssl);         /* service connection */
+        servlet(ssl);         /* service connection */
     }
     close(server);          /* close server socket */
     SSL_CTX_free(ctx);         /* release context */
-}
-
-#define PORT 6969
-
-
-int run(int count, char *strings[]) {
-
-
-    while(1){
-    int server_fd, new_socket, valread; 
-    struct sockaddr_in address; 
-    int opt = 1; 
-    int addrlen = sizeof(address); 
-    char buffer[1024] = {0};
-    std::string reply;
-    char* hello = "hello\n";
-
-
-       
-    // Creating socket file descriptor 
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
-    { 
-        perror("socket failed"); 
-        exit(EXIT_FAILURE); 
-    } 
-       
-    // Forcefully attaching socket to the port 8080 
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, 
-        &opt, sizeof(opt))) 
-    { 
-        perror("setsockopt"); 
-        exit(EXIT_FAILURE); 
-    } 
-    address.sin_family = AF_INET; 
-    address.sin_addr.s_addr = INADDR_ANY; 
-    address.sin_port = htons( PORT ); 
-       
-    // Forcefully attaching socket to the port 8080 
-    if (bind(server_fd, (struct sockaddr *)&address,  
-                                 sizeof(address))<0) 
-    { 
-        perror("bind failed"); 
-        exit(EXIT_FAILURE); 
-    } 
-    if (listen(server_fd, 3) < 0) 
-    { 
-        perror("listen"); 
-        exit(EXIT_FAILURE); 
-    } 
-    if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  
-                       (socklen_t*)&addrlen))<0) 
-    { 
-        perror("accept"); 
-        exit(EXIT_FAILURE); 
-    } 
-    valread = read(new_socket , buffer, 1024); 
-    printf("Here is the command: %s\n", buffer);
-    write(new_socket, exec_task(buffer).c_str(), 18);
-    send(new_socket , hello , strlen(hello) , 0 ); 
-    printf("Hello message sent\n"); 
-}
-    return 0; 
 }

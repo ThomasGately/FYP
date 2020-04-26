@@ -164,7 +164,7 @@ struct testing_server {
 
 	void setup_testing_server() {
 
-		port.push_back(7000);
+		port.push_back(8003);
 		port.push_back(7001);
 		port.push_back(7002);
 		port.push_back(7003);
@@ -174,19 +174,18 @@ struct testing_server {
 		name.push_back("ubuntu RPI 3");
 		name.push_back("ubuntu RPI 4");
 
-		hostname.push_back("172.17.0.1");
-		hostname.push_back("172.17.0.1");
-		hostname.push_back("172.17.0.1");
-		hostname.push_back("172.17.0.1");
-
 		/*
 
+		hostname.push_back("172.17.0.1");
+		hostname.push_back("172.17.0.1");
+		hostname.push_back("172.17.0.1");
+		hostname.push_back("172.17.0.1");
+
+		*/
+		hostname.push_back("192.168.1.30");
 		hostname.push_back("192.168.1.34");
 		hostname.push_back("192.168.1.33");
 		hostname.push_back("192.168.1.32");
-		hostname.push_back("192.168.1.21");
-
-		*/
 
 		username.push_back("ubuntu");
 		username.push_back("ubuntu");
@@ -326,11 +325,18 @@ int serialized(int port, std::string hostname, std::string message) {
 
 
 		ctx = InitCTX();
-		server = OpenConnection(hostname.c_str(), port);
+		printf("%s\n", "jkhjkh");
 
+		try {
+		server = OpenConnection(hostname.c_str(), port);
+	} catch(char *excp) {
+		ERR_print_errors_fp(stderr);
+
+	}
+
+printf("%s\n", "jkhjkh");
 		//create new SSL connection state 
 		ssl = SSL_new(ctx);
-
 		//attach the socket descriptor
 		SSL_set_fd(ssl, server);
 
@@ -350,6 +356,7 @@ int serialized(int port, std::string hostname, std::string message) {
 			//release connection state
 			SSL_free(ssl);
 		}
+		ERR_print_errors_fp(stderr);
 		//close socket
 		close(server);
 		//release context
@@ -361,49 +368,6 @@ int serialized(int port, std::string hostname, std::string message) {
 	return ret;
 }
 
-int serialized2(int port, std::string hostname, std::string message) {
-
-	int sock = 0, valread; 
-    struct sockaddr_in serv_addr; 
-    char buffer[1024] = {0}; 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
-    { 
-        printf("\n Socket creation error \n"); 
-        return -1; 
-    } 
-   
-    serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(port); 
-       
-    // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, hostname.c_str(), &serv_addr.sin_addr)<=0)  
-    { 
-        printf("\nInvalid address/ Address not supported \n"); 
-        return -1; 
-    } 
-   
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
-    { 
-        printf("\nConnection Failed \n"); 
-        return -1; 
-    }
-    printf("\ngrim \n"); 
-
-    send(sock , message.c_str(), strlen(message.c_str()) , 0 ); 
-    printf("\nkek 1\n"); 
-
-    valread = read(sock , buffer, 1024); 
-        printf("\nkek 2 \n"); 
-
-    printf("%s\n", buffer); 
-    return 0; 
-}
-/*
-int send_message(int server, struct testing_server sever, std::string message) {
-
-	return send_message(sever.port, sever.hostname[server], message);
-}
-*/
 std::string exec_cmd(const char* cmd) {
 	
 	std::array<char, 128> buffer;
@@ -431,11 +395,14 @@ void showq(std::queue<std::string> gq)
 } 
 
 
-void run_tests() {
+void run_tests(int i) {
 
 	std::ifstream list_of_tests("project/list_of_tests");
 	std::queue<std::string> tests;
 	std::string line;
+
+	testing_server servers;
+	servers.setup_testing_server();
 
 	while (list_of_tests >> line) {
 		tests.push(line);
@@ -447,7 +414,7 @@ void run_tests() {
 
 		std::stringstream ss;
 		ss << "3 project/build/" << tests.front() << " 0.1 1";
-		serialized2(6969, "172.17.0.1", ss.str());
+		serialized(servers.port[i], servers.hostname[i], ss.str());
 		tests.pop(); 
 	}
 }
@@ -472,7 +439,7 @@ void run_tests_thread() {
 		std::vector<std::thread> thread_servers;
 		std::stringstream ss;
 
-		for(int i = 0; i < 4; ++i) {
+		for(int i = 2; i < 3; ++i) {
 
 			ss << "3 project/build/" << tests.front() << " 0.1 1";
 			thread_servers.push_back(std::thread(serialized, servers.port[i], servers.hostname[i], ss.str()));
@@ -493,9 +460,12 @@ int main(int count, char *strings[]) {
 
 
 	//	send_message(6969, "172.17.0.1", "0 ls -la");
-
+	run_tests(0);
+	//run_tests(1);
+	run_tests(2);
+	run_tests(3);
 	//run_tests_thread();
-	run_tests_thread();
+	//run_tests_thread();
 /*
 	testing_server servers;
 	servers.setup_testing_server();

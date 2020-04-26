@@ -21,6 +21,8 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include <stdio.h>      /* printf */
+#include <stdarg.h> 
 
 std::string exec(const char* cmd) {
 
@@ -263,10 +265,9 @@ public:
                   " object as  callable\n"; 
     } 
 }; 
-  
-int main() 
-{ 
-    cout << "Threads 1 and 2 and 3 "
+
+int kek(){
+	    cout << "Threads 1 and 2 and 3 "
          "operating independently" << endl; 
   
     // This thread is launched by using  
@@ -297,6 +298,48 @@ int main()
   
     // Wait for thread t3 to finish 
     th3.join(); 
+
+
+}
+
+using namespace std;
+#define DEBUG 1
+
+inline string get_current_date_time(string s){
+    time_t now = time(0);
+    struct tm  tstruct;
+    char  buf[80];
+    tstruct = *localtime(&now);
+    if(s=="now")
+        strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
+    else if(s=="date")
+        strftime(buf, sizeof(buf), "%Y-%m-%d", &tstruct);
+    return string(buf);
+};
+
+inline void logger(const char *fmt, ...){
+
+    char buffer[4096];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    string filePath = "./logs/log_"+get_current_date_time("date")+".txt";
+    string now = get_current_date_time("now");
+    ofstream ofst(filePath.c_str(), std::ios_base::out | std::ios_base::app );
+
+    if (DEBUG) 
+    	cout << now << '\t' << buffer << '\n';
+
+    ofst << now << '\t' << buffer << '\n';
+    ofst.close();
+}
+
+
+
+int main() 
+{ 
+	logger("kek%s%s", " kekman ", "grim");
   
     return 0; 
 } 
