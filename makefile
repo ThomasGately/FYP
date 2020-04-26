@@ -9,21 +9,21 @@ CC = gcc                        # compiler to use
 
 all: test_server test openssl central_server
 
-test_server: test_server.cpp
+test_server: src/test_server.cpp
 	@echo "------ test_server.cpp ------\n"
-	gcc -Wall -o build/test_server.out test_server.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc
+	gcc -Wall -o build/test_server.out src/test_server.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc
 
-central_server: central_server.cpp
+central_server: src/central_server.cpp
 	@echo "------ central_server.cpp ------\n"
-	gcc -Wall -o build/central_server.out central_server.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -pthread
+	gcc -Wall -o build/central_server.out src/central_server.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -pthread
 
-test: test.cpp
+test: src/test.cpp
 	@echo "------ test.cpp ------\n"
-	gcc -Wall -o build/test.out test.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -lzip -pthread
+	gcc -Wall -o build/test.out src/test.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -lzip -pthread
 
-openssl: openssl.cpp
+openssl: src/openssl.cpp
 	@echo "------ openssl.cpp ------\n"
-	gcc -Wall -o build/openssl.out openssl.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -lzip -pthread
+	gcc -Wall -o build/openssl.out src/openssl.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -lzip -pthread
 
 clean:
 	@echo "Cleaning up..."

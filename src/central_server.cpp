@@ -164,10 +164,17 @@ struct testing_server {
 
 	void setup_testing_server() {
 
-		port.push_back(8003);
+		/*
+	serialized(7000, "192.168.1.32", "0 ls -la");
+	serialized(7001, "192.168.1.30", "0 ls -la");
+	serialized(7002, "192.168.1.33", "0 ls -la");
+	serialized(7006, "192.168.1.34", "0 ls -la");
+		*/
+
 		port.push_back(7001);
+		port.push_back(7006);
 		port.push_back(7002);
-		port.push_back(7003);
+		port.push_back(7000);
 
 		name.push_back("ubuntu RPI 1");
 		name.push_back("ubuntu RPI 2");
@@ -414,7 +421,7 @@ void run_tests(int i) {
 
 		std::stringstream ss;
 		ss << "3 project/build/" << tests.front() << " 0.1 1";
-		serialized(servers.port[i], servers.hostname[i], ss.str());
+		serialized(8000, "192.168.1.21", "0 ls -la");
 		tests.pop(); 
 	}
 }
@@ -439,7 +446,7 @@ void run_tests_thread() {
 		std::vector<std::thread> thread_servers;
 		std::stringstream ss;
 
-		for(int i = 2; i < 3; ++i) {
+		for(int i = 0; i < 4; ++i) {
 
 			ss << "3 project/build/" << tests.front() << " 0.1 1";
 			thread_servers.push_back(std::thread(serialized, servers.port[i], servers.hostname[i], ss.str()));
@@ -458,13 +465,18 @@ void run_tests_thread() {
 
 int main(int count, char *strings[]) {
 
+printf("serialized, %d , %s\n", atoi(strings[1]), strings[2]);
 
-	//	send_message(6969, "172.17.0.1", "0 ls -la");
-	run_tests(0);
+	serialized(7000, "192.168.1.32", "0 ls -la");
+	serialized(7001, "192.168.1.30", "0 ls -la");
+	serialized(7002, "192.168.1.33", "0 ls -la");
+	serialized(7006, "192.168.1.34", "0 ls -la");
+
+	//run_tests(0);
 	//run_tests(1);
-	run_tests(2);
-	run_tests(3);
-	//run_tests_thread();
+	//run_tests(2);
+	//run_tests(3);
+	run_tests_thread();
 	//run_tests_thread();
 /*
 	testing_server servers;

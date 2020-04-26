@@ -24,7 +24,7 @@
 
 using namespace std;
 
-#define DEBUG 0
+#define DEBUG 1
 #define FAIL 1
 
 inline string get_current_date_time(string s){
@@ -50,9 +50,14 @@ inline void logger(const char *fmt, ...){
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
-    string filePath = "./logs/log_"+get_current_date_time("date") +" .log";
+    string filePath = "./logs/log_" + get_current_date_time("date") + " .log";
     string now = get_current_date_time("now");
-    ofstream ofst(filePath.c_str(), std::ios_base::out | std::ios_base::app );
+    ofstream ofst;
+    ofst.open(filePath.c_str(), std::ios_base::out | std::ios_base::app );
+
+    if (!ofst) {
+        ofst.open(filePath.c_str(), fstream::out | fstream::trunc);
+    }
 
     if (DEBUG) {
         cout << now << '\t' << buffer << '\n';
@@ -65,7 +70,7 @@ inline void logger(const char *fmt, ...){
 inline void openssl_logger(){
 
     FILE* file;
-    string filePath = "./logs/log_"+get_current_date_time("date")+".log";
+    string filePath = "./logs/log_" + get_current_date_time("date") + ".log";
     file = fopen(filePath.c_str(), "r");
 
     if (DEBUG) {
@@ -221,6 +226,8 @@ std::string exec_task(std::string input) {
     tasks task = static_cast<tasks>(std::stoi(input.substr(0, 1)));
     input.erase(0, 2);
 
+    logger("exec_task --> %d -- %d", task, input);
+
     switch (task) {
         case task_exec_cmd :
             return exec_cmd(input);
@@ -238,40 +245,33 @@ std::string exec_task(std::string input) {
 }
 
 /* Serve the connection -- threadable */
-void servlet(SSL* ssl) {
-    
-    char buf[1024];
+void Servlet(SSL* ssl) /* Serve the connection -- threadable */
+{   char buf[1024];
     std::string reply;
     int sd, bytes;
 
-    /* do SSL-protocol accept */
-    if (SSL_accept(ssl) == FAIL) {
+    if ( SSL_accept(ssl) == FAIL ){     /* do SSL-protocol accept */
         ERR_print_errors_fp(stderr);
-    }
-    else {
-
-        /* get any certificates */
-        show_certs(ssl);
-        /* get request */
-        bytes = SSL_read(ssl, buf, sizeof(buf));
-        if ( bytes > 0 ) {
-
+        printf("222");
+    }else
+    {
+        show_certs(ssl);        /* get any certificates */
+        bytes = SSL_read(ssl, buf, sizeof(buf)); /* get request */
+        if ( bytes > 0 )
+        {
             buf[bytes] = 0;
-            logger("central_server msg: \"%s\"\n", buf);
+            printf("central_server msg: \"%s\"\n", buf);
             reply = exec_task(std::string(buf));
-            /* send reply */
-            SSL_write(ssl, reply.c_str(), strlen(reply.c_str()));
+            SSL_write(ssl, reply.c_str(), strlen(reply.c_str())); /* send reply */
         }
         else
             ERR_print_errors_fp(stderr);
     }
-    /* get socket connection */
-    sd = SSL_get_fd(ssl);
-    /* release SSL state */
-    SSL_free(ssl);
-    /* close connection */
-    close(sd);
+    sd = SSL_get_fd(ssl);       /* get socket connection */
+    SSL_free(ssl);         /* release SSL state */
+    close(sd);          /* close connection */
 }
+
 
 int main(int count, char *strings[]) {
 
@@ -279,42 +279,34 @@ int main(int count, char *strings[]) {
     int server;
     char *portnum;
 
-    if (!is_root()) {
-
-        logger("This program must be run as root/sudo user!!\n");
+    if(!is_root())
+    {
+        printf("This program must be run as root/sudo user!!\n");
         exit(0);
     }
-    if (count != 2) {
-
-        logger("Usage: %s <portnum>\n", strings[0]);
+    if ( count != 2 )
+    {
+        printf("Usage: %s <portnum>\n", strings[0]);
         exit(0);
     }
     SSL_library_init();
 
     portnum = strings[1];
-    /* initialize SSL */
-    ctx = init_server_CTX();
-    /* load certs */
-    load_certificates(ctx, "mycert.pem", "mycert.pem");
-    /* create server socket */
-    server = open_listener(atoi(portnum));
-    while(1)
+    ctx = init_server_CTX();        /* initialize SSL */
+    load_certificates(ctx, "mycert.pem", "mycert.pem"); /* load certs */
+    server = open_listener(atoi(portnum));    /* create server socket */
+    while (1)
     {   struct sockaddr_in addr;
         socklen_t len = sizeof(addr);
         SSL *ssl;
 
-        /* accept connection as usual */
-        int client = accept(server, (struct sockaddr*)&addr, &len);
-        logger("Connection: %s:%d\n",inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-        /* get new SSL state with context */
-        ssl = SSL_new(ctx);
-        /* set connection socket to SSL state */
-        SSL_set_fd(ssl, client);
-        /* service connection */
-        servlet(ssl);         
+        int client = accept(server, (struct sockaddr*)&addr, &len);  /* accept connection as usual */
+        printf("Connection: %s:%d\n",inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+        ssl = SSL_new(ctx);              /* get new SSL state with context */
+        SSL_set_fd(ssl, client);      /* set connection socket to SSL state */
+        Servlet(ssl);         /* service connection */
     }
-    /* close server socket */
-    close(server);
-    /* release context */
-    SSL_CTX_free(ctx);
+    close(server);          /* close server socket */
+    SSL_CTX_free(ctx);         /* release context */
 }
+

@@ -1,28 +1,43 @@
+#include <stdio.h>
+#include <errno.h>
+#include <unistd.h>
+#include <malloc.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <resolv.h>
+#include <netdb.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <fstream>
+#include <string>
+#include <cstring>
+#include <vector>
+#include <sstream>
+#include <errno.h>
+#include <unistd.h>
+#include <malloc.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <resolv.h>
+#include "openssl/ssl.h"
+#include "openssl/err.h"
 #include <iostream>
 #include <cstdio>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <array>
-#include <string>
-#include <dirent.h>
-#include <errno.h>
-#include <zip.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <limits.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <sys/resource.h>
 #include <fstream>
 #include <string>
-#include <cstring>
+#include <queue> 
 #include <vector>
-#include <stdio.h>      /* printf */
-#include <stdarg.h> 
+#include <thread>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+#include <openssl/crypto.h>
 
 std::string exec(const char* cmd) {
 
@@ -240,7 +255,7 @@ int main(int count, char *strings[]) {
 
 	//printf("%s \n", exec("ls -la").c_str());
 }
-*/
+
 
 #include <iostream> 
 #include <thread> 
@@ -302,6 +317,26 @@ int kek(){
 
 }
 
+inline void logger(const char *fmt, ...){
+
+    char buffer[4096];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    string filePath = "./../logs/log_" + get_current_date_time("date") + " .log";
+    string now = get_current_date_time("now");
+    ofstream ofst(filePath.c_str(), std::ios_base::out | std::ios_base::app );
+
+    if (DEBUG) {
+        cout << now << '\t' << buffer << '\n';
+    }
+
+    ofst << now << '\t' << buffer << '\n';
+    ofst.close();
+}
+*/
+
 using namespace std;
 #define DEBUG 1
 
@@ -324,22 +359,41 @@ inline void logger(const char *fmt, ...){
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
-    string filePath = "./logs/log_"+get_current_date_time("date")+".txt";
+    string filePath = "./logs/log_" + get_current_date_time("date") + ".log";
     string now = get_current_date_time("now");
-    ofstream ofst(filePath.c_str(), std::ios_base::out | std::ios_base::app );
+    ofstream ofst;
+    ofst.open(filePath.c_str(), std::ios_base::out | std::ios_base::app );
 
-    if (DEBUG) 
-    	cout << now << '\t' << buffer << '\n';
+    if (!ofst) {
+        ofst.open(filePath.c_str(), fstream::out | fstream::trunc);
+    }
+
+    if (DEBUG) {
+        cout << now << '\t' << buffer << '\n';
+    }
 
     ofst << now << '\t' << buffer << '\n';
     ofst.close();
 }
 
+inline void openssl_logger(){
 
+    FILE* file;
+    string filePath = "./logs/log_" + get_current_date_time("date") + ".log";
+    file = fopen(filePath.c_str(), "a");
 
-int main() 
-{ 
-	logger("kek%s%s", " kekman ", "grim");
+    if (DEBUG) {
+        ERR_print_errors_fp(stderr);
+    }
+    else {
+        ERR_print_errors_fp(file);
+    }
+}
+
+int main() {
+
+	openssl_logger();
+	logger("kek");
   
     return 0; 
 } 
