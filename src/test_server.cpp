@@ -31,7 +31,6 @@ using namespace std;
 string get_current_dir();
 void zip_files();
 void un_zip_files();
-void un_zip_files();
 void chmod_tsets_files();
 inline string get_current_date_time(string s);
 inline void logger(const char *fmt, ...);
@@ -50,6 +49,7 @@ void Servlet(SSL* ssl);
 void run(int count, char *strings[]);
 
 string hostname;
+string current_dir;
 string project_dir;
 string project_build_dir;
 string project_list_of_tests;
@@ -66,16 +66,29 @@ string get_current_dir() {
 
 void zip_files() {
 
-    zipper::Zipper zipper(project_dir + "/ziptest.zip");
+    string project_dir_build_zip = project_dir + "/ziptest.zip";
+
+    remove(project_dir_build_zip.c_str());
+
+    logger("Makeing zip file of build --> %s", project_dir_build_zip.c_str());
+
+    zipper::Zipper zipper(project_dir_build_zip);
     zipper.open();
-    zipper.add(project_dir + project_build_dir);
+
+    logger("Adding dir --> %s", project_build_dir.c_str());
+
+    zipper.add(project_build_dir);
     zipper.close();
 }
 
 void un_zip_files() {
 
-    zipper::Unzipper unzipper(get_current_dir() + "/ziptest.zip");
-    unzipper.extract(get_current_dir() + "/ziptest");
+    string project_dir_build_zip = project_dir + "/ziptest.zip";    
+
+    logger("Unziping build --> %s", project_dir_build_zip.c_str());
+
+    zipper::Unzipper unzipper(project_dir_build_zip);
+    unzipper.extract(project_build_dir);
 }
 
 void chmod_tsets_files() {
@@ -86,7 +99,7 @@ void chmod_tsets_files() {
 
     while (list_of_tests >> line) {
 
-        dir_of_test = project_dir + project_build_dir + line;
+        dir_of_test = project_build_dir + line;
 
         if (chmod(dir_of_test.c_str(), 755) == FAIL) {
 
@@ -117,7 +130,7 @@ inline void logger(const char *fmt, ...) {
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
-    string filePath = "./logs/log_" +  hostname + "_" + get_current_date_time("date") + ".log";
+    string filePath = current_dir + "/logs/log_" +  hostname + "_" + get_current_date_time("date") + ".log";
     string now = get_current_date_time("now");
     ofstream ofst;
     ofst.open(filePath.c_str(), std::ios_base::out | std::ios_base::app );
@@ -137,7 +150,7 @@ inline void logger(const char *fmt, ...) {
 inline void openssl_logger() {
 
     FILE* file;
-    string filePath = "./logs/log_" + get_current_date_time("date") + ".log";
+    string filePath = current_dir + "/logs/log_" + get_current_date_time("date") + ".log";
     file = fopen(filePath.c_str(), "a");
 
     if (DEBUG) {
@@ -186,18 +199,18 @@ std::string run_test(std::string test) {
 
     std::stringstream ss;
 
-    ss << project_dir << "/" << test;
+    ss << project_build_dir << "/" << test;
 
     return exec_cmd(ss.str());
 }
 
-std::string build_project(std::string test) {
+std::string build_project(std::string make) {
 
     std::stringstream ss;
 
-    ss << get_current_dir() << "/" << test;
+    ss << "bash " << project_dir << "/" << make;
 
-    if (exec_cmd(test) != "") {
+    if (exec_cmd(ss.str()) != "") {
 
         return "Build failed";
     }
@@ -206,12 +219,30 @@ std::string build_project(std::string test) {
     return "Build successful";
 }
 
+
+std::string un_zip_build(std::string make) {
+
+    un_zip_files();
+    return "Unzip successful";
+}
+
+std::string run_bash_script(std::string bash_script) {
+
+    std::stringstream ss;
+
+    ss << "bash " << project_dir << "/" << bash_script;
+
+    return exec_cmd(ss.str());
+}
+
 enum tasks {
     task_exec_cmd, 
     task_git_clone,
     task_git_checkout,
     task_run_test,
-    task_build_project
+    task_build_project,
+    task_un_zip_build,
+    task_run_bash_script
 }; 
 
 std::string exec_task(std::string input) {
@@ -234,8 +265,14 @@ std::string exec_task(std::string input) {
             break;
         case task_build_project :
             return build_project(input);
-            break;            
-    }
+            break;
+        case task_un_zip_build :
+            return un_zip_build(input);
+            break;
+        case task_run_bash_script :
+            return run_bash_script(input);
+            break;
+        }
 }
 
 
@@ -418,6 +455,11 @@ int main(int count, char *strings[]) {
         logger("Usage: %s <portnum> <hostname>", strings[0]);
         exit(0);
     }
+
+    current_dir = get_current_dir();
+    project_dir = current_dir + "/project";
+    project_build_dir = project_dir + "/build";
+    project_list_of_tests = project_dir + "/list_of_tests";
 
     hostname = strings[2];
     run(count, strings);

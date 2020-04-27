@@ -39,18 +39,105 @@
 
 #include <openssl/err.h>
 #include <openssl/ssl.h>
-	#include <openssl/crypto.h>
+#include <openssl/crypto.h>
 
-int testtest = 0;
+using namespace std;
+#define stringify(name) # name
+#define DEBUG 1
+#define FAIL -1
 
-#define FAIL    -1
-
+string current_dir;
 
 int send_message(int port, std::string hostname, std::string message);
-
-//int send_message(int server, struct testing_server sever, std::string message);
+string get_current_dir();
+inline string get_current_date_time(string s);
+inline void logger(const char *fmt, ...);
+inline void openssl_logger();
 
 struct testing_server;
+
+enum tasks {
+    task_exec_cmd, 
+    task_git_clone,
+    task_git_checkout,
+    task_run_test,
+    task_build_project,
+    task_un_zip_build,
+    task_run_bash_script
+};
+
+string tasks_names[] {
+    stringify(task_exec_cmd), 
+    stringify(task_git_clone),
+    stringify(task_git_checkout),
+    stringify(task_run_test),
+    stringify(task_build_project),
+    stringify(task_un_zip_build),
+    stringify(task_run_bash_script)
+};
+
+string get_current_dir() {
+
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+
+        logger("get_current_dir() error");
+    }
+    return string(cwd);
+}
+
+inline string get_current_date_time(string s) {
+
+    time_t now = time(0);
+    struct tm  tstruct;
+    char  buf[80];
+    tstruct = *localtime(&now);
+    if (s == "now") {
+        strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
+    }
+    else if (s == "date"){
+        strftime(buf, sizeof(buf), "%Y-%m-%d", &tstruct);
+    }
+    return string(buf);
+};
+
+inline void logger(const char *fmt, ...) {
+
+    char buffer[4096];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    string filePath = current_dir + "/logs/log_central_server_" + get_current_date_time("date") + ".log";
+    string now = get_current_date_time("now");
+    ofstream ofst;
+    ofst.open(filePath.c_str(), std::ios_base::out | std::ios_base::app );
+
+    if (!ofst) {
+        ofst.open(filePath.c_str(), fstream::out | fstream::trunc);
+    }
+
+    if (DEBUG) {
+        cout << now << '\t' << buffer << '\n';
+    }
+
+    ofst << now << '\t' << buffer << '\n';
+    ofst.close();
+}
+
+inline void openssl_logger() {
+
+    FILE* file;
+    string filePath = current_dir + "/logs/log_" + get_current_date_time("date") + ".log";
+    file = fopen(filePath.c_str(), "a");
+
+    if (DEBUG) {
+        ERR_print_errors_fp(stderr);
+    }
+    else {
+        ERR_print_errors_fp(file);
+    }
+}
 
 int OpenConnection(const char *hostname, int port)
 {   int sd;
@@ -100,17 +187,17 @@ void ShowCerts(SSL* ssl)
 	cert = SSL_get_peer_certificate(ssl); /* get the server's certificate */
 	if ( cert != NULL )
 	{
-		printf("Server certificates:\n");
+		logger("Server certificates:");
 		line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
-		printf("Subject: %s\n", line);
+		logger("Subject: %s", line);
 		free(line);       /* free the malloc'ed string */
 		line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
-		printf("Issuer: %s\n", line);
+		logger("Issuer: %s", line);
 		free(line);       /* free the malloc'ed string */
 		X509_free(cert);     /* free the malloc'ed certificate copy */
 	}
 	else
-		printf("Info: No client certificates configured.\n");
+		logger("Info: No client certificates configured.");
 }
 
 int temp(int count, char *strings[]) {
@@ -124,7 +211,7 @@ int temp(int count, char *strings[]) {
 
 	if ( count != 3 )
 	{
-		printf("usage: %s <hostname> <portnum>\n", strings[0]);
+		logger("usage: %s <hostname> <portnum>\n", strings[0]);
 		exit(0);
 	}
 	SSL_library_init();
@@ -142,11 +229,11 @@ int temp(int count, char *strings[]) {
 		ShowCerts(ssl);        /* get any certs */
 		char *msg = "Hello???";
 
-		printf("Connected with %s encryption\n", SSL_get_cipher(ssl));
+		logger("Connected with %s encryption\n", SSL_get_cipher(ssl));
 		SSL_write(ssl, msg, strlen(msg));   /* encrypt & send message */
 		bytes = SSL_read(ssl, buf, sizeof(buf)); /* get reply & decrypt */
 		buf[bytes] = 0;
-		printf("Received: \"%s\"\n", buf);
+		logger("Received: \"%s\"\n", buf);
 		SSL_free(ssl);        /* release connection state */
 	}
 	close(server);         /* close socket */
@@ -157,10 +244,12 @@ int temp(int count, char *strings[]) {
 
 struct testing_server {
 
-	std::vector<int> port;
-	std::vector<std::string> name;
-	std::vector<std::string> hostname;
-	std::vector<std::string> username;
+	int no_of_servers = 0;
+	vector<int> port;
+	vector<bool> in_use;
+	vector<string> name;
+	vector<string> hostname;
+	vector<string> username;
 
 	void setup_testing_server() {
 
@@ -171,15 +260,32 @@ struct testing_server {
 	serialized(7006, "192.168.1.34", "0 ls -la");
 		*/
 
-		port.push_back(7001);
-		port.push_back(7006);
-		port.push_back(7002);
-		port.push_back(7000);
-
+		port.push_back(9004);
+		in_use.push_back(false);
 		name.push_back("ubuntu RPI 1");
+		hostname.push_back("192.168.1.30");
+		username.push_back("ubuntu");
+		
+		port.push_back(9001);
+		in_use.push_back(false);
 		name.push_back("ubuntu RPI 2");
+		hostname.push_back("192.168.1.34");
+		username.push_back("ubuntu");
+
+		port.push_back(9002);
+		in_use.push_back(false);
 		name.push_back("ubuntu RPI 3");
+		hostname.push_back("192.168.1.33");
+		username.push_back("ubuntu");
+
+		port.push_back(9003);
+		in_use.push_back(false);
 		name.push_back("ubuntu RPI 4");
+		hostname.push_back("192.168.1.32");
+		username.push_back("ubuntu");
+
+		no_of_servers = 4;
+
 
 		/*
 
@@ -188,36 +294,20 @@ struct testing_server {
 		hostname.push_back("172.17.0.1");
 		hostname.push_back("172.17.0.1");
 
-		*/
-		hostname.push_back("192.168.1.30");
-		hostname.push_back("192.168.1.34");
-		hostname.push_back("192.168.1.33");
-		hostname.push_back("192.168.1.32");
-
-		username.push_back("ubuntu");
-		username.push_back("ubuntu");
-		username.push_back("ubuntu");
-		username.push_back("ubuntu");
+		*/		
 	}
 
-	std::string build_send_file_string(int server, std::string path_to_file, std::string path_to_destination) {
+	void setup_testing_server_localhost() {
 
-		std::stringstream ss;
+		port.push_back(6969);
+		in_use.push_back(false);
+		name.push_back("my pc");
+		hostname.push_back("192.168.1.21");
+		username.push_back("tom");
 
-		//sshpass -p "kekman69" scp binary.zip ubuntu@192.168.1.34:/home/ubuntu/testing 
-		ss << "sshpass -p \"kekman69\" scp " << path_to_file << ' ' << username[server] << '@' << hostname[server] << ':' << path_to_destination;
-
-		return ss.str();
+		++no_of_servers;
 	}
 };
-
-void test_printf() {
-
-	printf("grim -- %d\n", testtest);
-
-	testtest++;
-
-}
 
 int send_message(int port, std::string hostname, std::string message) {
 
@@ -227,39 +317,32 @@ int send_message(int port, std::string hostname, std::string message) {
 	char buf[1024];
 	int bytes;
 
-		test_printf();
-
-
 	SSL_library_init();
 
-	test_printf();
 
-	printf("%s --- %d -- %s\n", hostname.c_str(), port, message.c_str());
+	logger("%s --- %d -- %s\n", hostname.c_str(), port, message.c_str());
 
 	ctx = InitCTX();
 	server = OpenConnection(hostname.c_str(), port);
-		test_printf();
 
 	//create new SSL connection state 
 	ssl = SSL_new(ctx);
-		test_printf();
 
 	//attach the socket descriptor
 	SSL_set_fd(ssl, server);
-		test_printf();
 
 	//perform the connection
 	if (SSL_connect(ssl) == FAIL) {
 		ERR_print_errors_fp(stderr);
 	}
 	else {
-		printf("Connected with %s encryption\n", SSL_get_cipher(ssl));
+		logger("Connected with %s encryption\n", SSL_get_cipher(ssl));
 		//encrypt & send message
 		SSL_write(ssl, message.c_str(), strlen(message.c_str()));
 		//get reply & decrypt
 		bytes = SSL_read(ssl, buf, sizeof(buf));
 		buf[bytes] = 0;
-		printf("Received: \"%s\"\n", buf);
+		logger("Received: \"%s\"\n", buf);
 		//release connection state
 		SSL_free(ssl);
 	}
@@ -317,31 +400,29 @@ static int my_re_unlock(void) {
 	return CRYPTO_THREAD_unlock(re_lock);
 }
 
-int serialized(int port, std::string hostname, std::string message) {
+int serialized(int port, std::string hostname, tasks task, std::string message) {
 	
 	int ret = 0;
-		printf("%s --- %d -- %s\n", hostname.c_str(), port, message.c_str());
 
+	std::stringstream ss;
+
+	ss << task << " " << message;
+
+	message = ss.str();
+
+	logger("Serialized message to be sent --> %s", message.c_str());
 
 	if (my_re_lock() && my_wr_lock()) {
-			SSL_CTX *ctx;
-	SSL *ssl;
+		SSL_CTX *ctx;
+		SSL *ssl;
 		int server;
 		char buf[1024];
 		int bytes;
 
-
 		ctx = InitCTX();
-		printf("%s\n", "jkhjkh");
 
-		try {
 		server = OpenConnection(hostname.c_str(), port);
-	} catch(char *excp) {
-		ERR_print_errors_fp(stderr);
 
-	}
-
-printf("%s\n", "jkhjkh");
 		//create new SSL connection state 
 		ssl = SSL_new(ctx);
 		//attach the socket descriptor
@@ -350,16 +431,15 @@ printf("%s\n", "jkhjkh");
 		//perform the connection
 		if (SSL_connect(ssl) == FAIL) {
 			ERR_print_errors_fp(stderr);
-			printf("asdasd %d\n", 1);
 		}
 		else {
-			printf("Connected with %s encryption\n", SSL_get_cipher(ssl));
+			logger("Connected with %s encryption", SSL_get_cipher(ssl));
 			//encrypt & send message
 			SSL_write(ssl, message.c_str(), strlen(message.c_str()));
 			//get reply & decrypt
 			bytes = SSL_read(ssl, buf, sizeof(buf));
 			buf[bytes] = 0;
-			printf("Received: \"%s\"\n", buf);
+			logger("Received: \"%s\"", buf);
 			//release connection state
 			SSL_free(ssl);
 		}
@@ -386,7 +466,7 @@ std::string exec_cmd(const char* cmd) {
 	while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
 		result += buffer.data();
 	}
-	printf("%s \n", result.c_str());
+    logger("Result:\n%s", result.c_str());
 	return result;
 }
 
@@ -402,14 +482,11 @@ void showq(std::queue<std::string> gq)
 } 
 
 
-void run_tests(int i) {
+void run_tests(int i, struct testing_server servers) {
 
 	std::ifstream list_of_tests("project/list_of_tests");
 	std::queue<std::string> tests;
 	std::string line;
-
-	testing_server servers;
-	servers.setup_testing_server();
 
 	while (list_of_tests >> line) {
 		tests.push(line);
@@ -420,20 +497,17 @@ void run_tests(int i) {
 	while(!tests.empty()) {
 
 		std::stringstream ss;
-		ss << "3 project/build/" << tests.front() << " 0.1 1";
-		serialized(8000, "192.168.1.21", "0 ls -la");
+		ss << tests.front() << " 0.1 1";
+		serialized(servers.port[i], servers.hostname[i], task_run_test, ss.str());
 		tests.pop(); 
 	}
 }
 
-void run_tests_thread() {
+void run_tests_thread(vector<int> server_nos, struct testing_server servers) {
 
 	std::ifstream list_of_tests("project/list_of_tests");
 	std::queue<std::string> tests;
 	std::string line;
-
-	testing_server servers;
-	servers.setup_testing_server();
 
 	while (list_of_tests >> line) {
 		tests.push(line);
@@ -446,10 +520,10 @@ void run_tests_thread() {
 		std::vector<std::thread> thread_servers;
 		std::stringstream ss;
 
-		for(int i = 0; i < 4; ++i) {
+		for(int i = 0; i < server_nos.size(); ++i) {
 
-			ss << "3 project/build/" << tests.front() << " 0.1 1";
-			thread_servers.push_back(std::thread(serialized, servers.port[i], servers.hostname[i], ss.str()));
+			ss << tests.front() << " 0.1 1";
+			thread_servers.push_back(std::thread(serialized, servers.port[server_nos[i]], servers.hostname[server_nos[i]], task_run_test, ss.str()));
 			tests.pop();
 			ss.str(std::string());
 		}
@@ -461,32 +535,95 @@ void run_tests_thread() {
 	}
 }
 
+string send_build_files(int server_no, struct testing_server servers, string path_to_file, string path_to_destination) {
 
+	logger("send_build_files\n path_to_file --> %s\n path_to_destination --> %s", path_to_file.c_str(), path_to_destination.c_str());
+
+	stringstream ss;
+
+	//sshpass -p "kekman69" scp binary.zip ubuntu@192.168.1.34:/home/ubuntu/testing 
+	ss << "scp " << path_to_file << ' ' << servers.username[server_no] << '@' << servers.hostname[server_no] << ':' << path_to_destination;
+
+	logger("send_build_files --> %s", ss.str().c_str());
+
+	serialized(6969, "192.168.1.21", task_un_zip_build, "task_un_zip_build");
+
+	return exec_cmd(ss.str().c_str());
+}
+
+int find_free_server(struct testing_server servers) {
+
+	int count = 0;
+
+	while (true) {
+        if (!servers.in_use[count]) {
+        	servers.in_use[count] = true;
+        	return count;
+        }
+        if(servers.no_of_servers - 1 == count){
+        	count = 0;
+        }
+        else {
+        	++count;
+        }
+	}
+}
+
+vector<int> find_multiple_free_server(int no_of_servers, struct testing_server servers) {
+
+	vector<int> found_severs;
+
+	for (int i = 0; i < no_of_servers; ++i) {
+
+		found_severs.push_back(find_free_server(servers));
+	}
+	return found_severs;
+}
+
+void build_project(int server_no, struct testing_server servers) {
+
+	serialized(servers.port[server_no], servers.hostname[server_no], task_run_bash_script, "clean.sh");
+
+	serialized(servers.port[server_no], servers.hostname[server_no], task_build_project, "make.sh 100");
+
+	send_build_files(server_no, servers, current_dir + "/project/ziptest.zip", current_dir + "/project/ziptest.zip");
+}
+
+void test_on_localhost() {
+
+    current_dir = get_current_dir();
+	testing_server servers;
+	servers.setup_testing_server_localhost();
+
+	int server_no = find_free_server(servers);
+
+	build_project(server_no, servers);
+
+	exec_cmd("rm /project/build/testxx*");
+
+	send_build_files(0, servers, current_dir + "/project/ziptest.zip", current_dir + "/project/ziptest.zip");
+
+	run_tests(0, servers);
+}
+
+void test_on_pis() {
+
+    current_dir = get_current_dir();
+	testing_server servers;
+	servers.setup_testing_server();
+
+	int server_no = find_free_server(servers);
+
+	build_project(server_no, servers);
+
+	servers.in_use[server_no] = false;
+
+	vector<int> server_nos = find_multiple_free_server(4, servers);
+
+	run_tests_thread(server_nos, servers);
+}
 
 int main(int count, char *strings[]) {
 
-printf("serialized, %d , %s\n", atoi(strings[1]), strings[2]);
-
-	serialized(atoi(strings[1]), strings[2], "0 ls -la");
-
-
-	//serialized(7000, "192.168.1.32", "0 ls -la");
-	//serialized(7001, "192.168.1.30", "0 ls -la");
-	//serialized(7002, "192.168.1.33", "0 ls -la");
-	//serialized(7006, "192.168.1.34", "0 ls -la");
-
-	//run_tests(0);
-	//run_tests(1);
-	//run_tests(2);
-	//run_tests(3);
-	//run_tests_thread();
-	//run_tests_thread();
-/*
-	testing_server servers;
-	servers.setup_testing_server();
-	printf("testing %s \n", servers.build_send_file_string(0, "binary.zip", "/home/ubuntu/testing").c_str());
-	send_message(6969, "172.17.0.1", "")
-*/
-
-	//return temp2(count, strings);
+	test_on_localhost();
 }
