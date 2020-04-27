@@ -454,10 +454,10 @@ void run_tests_thread() {
 			ss.str(std::string());
 		}
 
-		for(auto& t : thread_servers)
+		for(auto& t : thread_servers) {
             t.join();
+		}
         thread_servers.clear();
-        sleep(.5);
 	}
 }
 

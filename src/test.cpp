@@ -38,6 +38,10 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <openssl/crypto.h>
+#include <sys/stat.h>
+#include <zipper/zipper.h>
+#include <zipper/unzipper.h>
+#include <zipper/tools.h>
 
 std::string exec(const char* cmd) {
 
@@ -390,10 +394,58 @@ inline void openssl_logger(){
     }
 }
 
+#define FAIL -1
+
+
+string get_current_dir() {
+
+	char cwd[PATH_MAX];
+   	if (getcwd(cwd, sizeof(cwd)) == NULL) {
+
+    	logger("get_current_dir() error");
+  	}
+   	return string(cwd);
+}
+
+void zip_files() {
+
+	zipper::Zipper zipper(get_current_dir() + "/ziptest.zip");
+	zipper.open();
+    zipper.add(get_current_dir() + "/project/build");
+    zipper.close();
+}
+
+void un_zip_files() {
+
+	zipper::Unzipper unzipper(get_current_dir() + "/ziptest.zip");
+    unzipper.extract(get_current_dir() + "/ziptest");
+}
+
+void chmod_tsets() {
+
+	std::ifstream list_of_tests("project/list_of_tests");
+	std::string line;
+	std::string dir_of_test;
+
+	while (list_of_tests >> line) {
+
+		dir_of_test = get_current_dir() + "/project/build/" + line;
+
+		if (chmod(dir_of_test.c_str(), 755) == FAIL) {
+
+    		logger("chmod_tsets() error: file --> %s", dir_of_test.c_str());
+		}
+	}
+}
+
 int main() {
 
-	openssl_logger();
-	logger("kek");
+	chmod_tsets();
+	//un_zip_files();
+	//zip_files();
+	//printf("tests %s\n", get_current_dir().c_str());
+	//openssl_logger();
+	//logger("kek");
   
     return 0; 
 } 

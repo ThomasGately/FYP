@@ -1,5 +1,5 @@
-#!/bin/bash
 #ping.sh
+#!/bin/bash
 
 ping -c 1 192.168.1.30
 ping -c 1 192.168.1.34
