@@ -43,7 +43,7 @@
 
 using namespace std;
 #define stringify(name) # name
-#define DEBUG 0
+#define DEBUG 1
 #define FAIL -1
 
 string current_dir;
@@ -77,6 +77,46 @@ string tasks_names[] {
     stringify(task_un_zip_build),
     stringify(task_run_bash_script)
 };
+
+   
+int serialized2(int port, std::string hostname, tasks task, std::string message) {
+
+	std::stringstream ss;
+
+	ss << task << " " << message;
+
+	message = ss.str();
+ 
+    int sock = 0, valread; 
+    struct sockaddr_in serv_addr; 
+    char buffer[1024] = {0}; 
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+    { 
+        printf("\n Socket creation error \n"); 
+        return -1; 
+    } 
+   
+    serv_addr.sin_family = AF_INET; 
+    serv_addr.sin_port = htons(port); 
+       
+    // Convert IPv4 and IPv6 addresses from text to binary form 
+    if(inet_pton(AF_INET, hostname.c_str(), &serv_addr.sin_addr)<=0)  
+    { 
+        printf("\nInvalid address/ Address not supported \n"); 
+        return -1; 
+    } 
+   
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+    { 
+        printf("\nConnection Failed \n"); 
+        return -1; 
+    }
+    logger("Connected with %s", hostname.c_str());
+    send(sock, message.c_str(), strlen(message.c_str()), 0); 
+    valread = read( sock , buffer, 1024); 
+    logger("Received: \"%s\"", buffer);
+    return 0; 
+} 
 
 string get_current_dir() {
 
@@ -275,13 +315,6 @@ struct testing_server {
 	vector<string> username;
 
 	void setup_testing_server() {
-
-		/*
-	serialized(7000, "192.168.1.32", "0 ls -la");
-	serialized(7001, "192.168.1.30", "0 ls -la");
-	serialized(7002, "192.168.1.33", "0 ls -la");
-	serialized(7006, "192.168.1.34", "0 ls -la");
-		*/
 
 		port.push_back(9004);
 		in_use.push_back(0);
@@ -555,17 +588,15 @@ void run_tests_thread(vector<int> server_nos, struct testing_server servers) {
 		for(int i = 0; i < server_nos.size(); ++i) {
 
 			ss << tests.front() << " 0.1 2";
-			thread_servers.push_back(std::thread(serialized, servers.port[server_nos[i]], servers.hostname[server_nos[i]], task_run_test, ss.str()));
+			thread_servers.push_back(std::thread(serialized2, servers.port[server_nos[i]], servers.hostname[server_nos[i]], task_run_test, ss.str()));
 			tests.pop();
 			ss.str(std::string());
 		}
-
-
-	}
-			for(auto& t : thread_servers) {
+		for(auto& t : thread_servers) {
             t.join();
 		}
-        thread_servers.clear();
+		thread_servers.clear();
+	}  
 }
 
 string send_build_files_to_test_server(int server_no, struct testing_server servers, string path_to_file, string path_to_destination) {
@@ -703,9 +734,9 @@ int main(int count, char *strings[]) {
 
 
 	testing_server servers;
-	servers.setup_testing_server();
+	servers.setup_testing_server_localhost();
 
-	vector<int> server_nos = find_multiple_free_server(4, servers);
+	vector<int> server_nos = find_multiple_free_server(1, servers);
 
 	run_tests_thread(server_nos, servers);
 }
