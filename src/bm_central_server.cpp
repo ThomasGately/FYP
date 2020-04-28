@@ -386,7 +386,7 @@ int send_message(int port, std::string hostname, std::string message) {
 static void ossl_init_base(void) {
 
     wr_lock = CRYPTO_THREAD_lock_new();
-	SSL_library_init();
+		SSL_library_init();
 
 }
 
@@ -524,7 +524,7 @@ void run_tests(int i, struct testing_server servers) {
 	while(!tests.empty()) {
 
 		std::stringstream ss;
-		ss << tests.front() << " 0.1 1";
+		ss << tests.front() << " 1 1";
 		serialized(servers.port[i], servers.hostname[i], task_run_test, ss.str());
 		tests.pop(); 
 	}
@@ -546,26 +546,25 @@ void run_tests_thread(vector<int> server_nos, struct testing_server servers) {
 	}
 
 	//send_message(6969, "172.17.0.1", "0 bash project/make.sh 100");
-		std::vector<std::thread> thread_servers;
 
 	while(!tests.empty()) {
 
+		std::vector<std::thread> thread_servers;
 		std::stringstream ss;
 
 		for(int i = 0; i < server_nos.size(); ++i) {
 
-			ss << tests.front() << " 0.1 2";
+			ss << tests.front() << " 1 2";
 			thread_servers.push_back(std::thread(serialized, servers.port[server_nos[i]], servers.hostname[server_nos[i]], task_run_test, ss.str()));
 			tests.pop();
 			ss.str(std::string());
 		}
 
-
-	}
-			for(auto& t : thread_servers) {
+		for(auto& t : thread_servers) {
             t.join();
 		}
         thread_servers.clear();
+	}
 }
 
 string send_build_files_to_test_server(int server_no, struct testing_server servers, string path_to_file, string path_to_destination) {
@@ -660,7 +659,7 @@ void test_on_localhost() {
 	run_tests(0, servers);
 }
 
-void test_on_pi() {
+void test_on_pis() {
 
     current_dir = get_current_dir();
 	testing_server servers;
@@ -679,7 +678,7 @@ void test_on_pi() {
 	run_tests_thread(server_nos, servers);
 }
 
-void test_on_pis() {
+void test_on_pi() {
 
     current_dir = get_current_dir();
 	testing_server servers;
@@ -689,23 +688,74 @@ void test_on_pis() {
 
 	build_project(server_no, servers);
 
+	send_build_files_to_central(server_no, servers, current_dir + "/project/ziptest.zip", current_dir + "/project/ziptest.zip");
+
+	run_tests(server_no, servers);
+}
+
+#include <benchmark/benchmark.h>
+
+static void BM_build_project(benchmark::State& state) {
+
+    current_dir = get_current_dir();
+	testing_server servers;
+	servers.setup_testing_server();
+
+	int server_no = find_free_server(servers);
+
+  	for (auto _ : state){
+    	build_project(server_no, servers);
+  	}
+}
+
+static void BM_test_on_pi(benchmark::State& state) {
+
+    current_dir = get_current_dir();
+	testing_server servers;
+	servers.setup_testing_server();
+
+	int server_no = find_free_server(servers);
+
+	//build_project(server_no, servers);
+
+	send_build_files_to_central(server_no, servers, current_dir + "/project/ziptest.zip", current_dir + "/project/ziptest.zip");
+
+  	for (auto _ : state){
+    	run_tests(server_no, servers);
+  	}
+}
+
+static void BM_test_on_4_pis(benchmark::State& state) {
+
+    current_dir = get_current_dir();
+	testing_server servers;
+	servers.setup_testing_server();
+
+	int server_no = find_free_server(servers);
+
+	//build_project(server_no, servers);
+
 	//send_build_files_to_central(server_no, servers, "/home/ubuntu/FYP/project/ziptest.zip", current_dir + "/project/ziptest.zip");
 
 	servers.in_use[server_no] = false;
 
 	vector<int> server_nos = find_multiple_free_server(4, servers);
+	
+	for (auto _ : state) {
+    	run_tests_thread(server_nos, servers);
+	}
 
-	run_tests_thread(server_nos, servers);
 }
 
+//BENCHMARK(BM_build_project);
+BENCHMARK(BM_test_on_pi);
+BENCHMARK(BM_test_on_4_pis);
+
+BENCHMARK_MAIN();
+
+/*
 int main(int count, char *strings[]) {
 
-
-
-	testing_server servers;
-	servers.setup_testing_server();
-
-	vector<int> server_nos = find_multiple_free_server(4, servers);
-
-	run_tests_thread(server_nos, servers);
+	//test_on_pis();
 }
+*/
