@@ -734,7 +734,7 @@ int main(int count, char *strings[]) {
 
 
 	testing_server servers;
-	servers.setup_testing_server_localhost();
+	servers.setup_testing_server();
 
 	vector<int> server_nos = find_multiple_free_server(1, servers);
 

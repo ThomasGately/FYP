@@ -7,7 +7,7 @@
 
 CC = gcc                        # compiler to use
 
-all: test_server test central_server bm_central_server
+all: test_server test central_server
 
 test_server: src/test_server.cpp
 	@echo "------ test_server.cpp ------\n"
