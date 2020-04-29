@@ -28,18 +28,22 @@
 
 using namespace std;
 
-string get_current_dir();
-void zip_files();
-void un_zip_files();
-void chmod_tsets_files();
-inline string get_current_date_time(string s);
-inline void logger(const char *fmt, ...);
-inline void openssl_logger();
-int OpenListener(int port);
-int isRoot();
-SSL_CTX* InitServerCTX(void);
-void LoadCertificates(SSL_CTX* ctx, char* CertFile, char* KeyFile);
-void ShowCerts(SSL* ssl);void Servlet(SSL* ssl);
-void run(int count, char *strings[]);
+static string hostname;
+
+class test_server {
+
+public:
+	static void run_openssl(int port);
+	static void run_sockaddr(int port);
+	static void run(int port, string _hostname);
+
+private:
+	static int open_listener(int port);
+	static int is_root(void);
+	static SSL_CTX* init_server_CTX(void);
+	static void load_certificates(SSL_CTX* ctx, char* CertFile, char* KeyFile);
+	static void show_certs(SSL* ssl);
+	static void servlet(SSL* ssl);
+};
 
 #endif

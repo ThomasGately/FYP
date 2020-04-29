@@ -32,6 +32,11 @@ using namespace std;
 class central_server {
 
 public:
+	static void test_on_localhost();
+	static void test_on_pi();
+	static void test_on_pis();
+
+private:
 	static int send_message(int port, string hostname, tasks::enum_tasks task, string message);
 	static int send_message_sockaddr(int port, string hostname, tasks::enum_tasks task, string message);
 	static int send_message_openssl(int port, std::string hostname, tasks::enum_tasks task, std::string message);
@@ -50,10 +55,6 @@ public:
 	static int find_free_server(struct str_testing_server &servers);
 	static vector<int> find_multiple_free_server(int no_of_servers, struct str_testing_server servers);
 	static void build_project(int server_no, struct str_testing_server servers);
-	static void test_on_localhost();
-	static void test_on_pi();
-	static void test_on_pis();
-	static string current_dir;
 };
 
 #endif

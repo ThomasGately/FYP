@@ -92,7 +92,7 @@ int central_server::send_message_openssl(int port, std::string hostname, tasks::
 			buf[bytes] = 0;
 
 			if (string(buf).find("failure") != std::string::npos) {
-				tasks::error_logger("failure --> \"%s\"", buf);
+				//tasks::error_logger("failure --> \"%s\"", buf);
 			}
 			tasks::logger("Received: \"%s\"", buf);
 			//release connection state
@@ -218,7 +218,40 @@ void central_server::show_queue(std::queue<std::string> input_queue) {
 		tasks::logger("show_queue --> %s", queue_print.front()); 
 		queue_print.pop(); 
 	}
-} 
+}
+
+string central_server::send_build_files_to_test_server(int server_no, struct str_testing_server servers, string path_to_file, string path_to_destination) {
+
+	tasks::logger("send_build_files_to_central\n path_to_file --> %s\n path_to_destination --> %s", path_to_file.c_str(), path_to_destination.c_str());
+
+	stringstream ss;
+
+	//sshpass -p "kekman69" scp binary.zip ubuntu@192.168.1.34:/home/ubuntu/testing 
+	ss << "scp " << path_to_file << ' ' << servers.username[server_no] << '@' << servers.hostname[server_no] << ':' << path_to_destination;
+
+	tasks::logger("send_build_files_to_central --> %s", ss.str().c_str());
+
+	send_message(servers.port[server_no], servers.hostname[server_no], tasks::task_un_zip_build, "task_un_zip_build");
+
+	return tasks::exec_cmd(ss.str().c_str());
+}
+
+
+string central_server::send_build_files_to_central(int server_no, struct str_testing_server servers, string path_to_file, string path_to_destination) {
+
+	tasks::logger("send_build_files_to_central\n path_to_file --> %s\n path_to_destination --> %s", path_to_file.c_str(), path_to_destination.c_str());
+
+	stringstream ss;
+
+	//scp binary.zip ubuntu@192.168.1.34:/home/ubuntu/testing 
+	ss << "scp " << servers.username[server_no] << '@' << servers.hostname[server_no] << ':' << path_to_file << ' ' << path_to_destination;
+
+	tasks::logger("send_build_files_to_central --> %s", ss.str().c_str());
+
+	send_message(servers.port[server_no], servers.hostname[server_no], tasks::task_un_zip_build, "task_un_zip_build");
+
+	return tasks::exec_cmd(ss.str().c_str());
+}
 
 
 void central_server::run_tests(int i, struct str_testing_server servers) {
@@ -275,40 +308,6 @@ void central_server::run_tests_thread(vector<int> server_nos, struct str_testing
 	}  
 }
 
-string central_server::send_build_files_to_test_server(int server_no, struct str_testing_server servers, string path_to_file, string path_to_destination) {
-
-	tasks::logger("send_build_files_to_central\n path_to_file --> %s\n path_to_destination --> %s", path_to_file.c_str(), path_to_destination.c_str());
-
-	stringstream ss;
-
-	//sshpass -p "kekman69" scp binary.zip ubuntu@192.168.1.34:/home/ubuntu/testing 
-	ss << "scp " << path_to_file << ' ' << servers.username[server_no] << '@' << servers.hostname[server_no] << ':' << path_to_destination;
-
-	tasks::logger("send_build_files_to_central --> %s", ss.str().c_str());
-
-	send_message(servers.port[server_no], servers.hostname[server_no], tasks::task_un_zip_build, "task_un_zip_build");
-
-	return tasks::exec_cmd(ss.str().c_str());
-}
-
-
-string central_server::send_build_files_to_central(int server_no, struct str_testing_server servers, string path_to_file, string path_to_destination) {
-
-	tasks::logger("send_build_files_to_central\n path_to_file --> %s\n path_to_destination --> %s", path_to_file.c_str(), path_to_destination.c_str());
-
-	stringstream ss;
-
-	//scp binary.zip ubuntu@192.168.1.34:/home/ubuntu/testing 
-	ss << "scp " << servers.username[server_no] << '@' << servers.hostname[server_no] << ':' << path_to_file << ' ' << path_to_destination;
-
-	tasks::logger("send_build_files_to_central --> %s", ss.str().c_str());
-
-	send_message(servers.port[server_no], servers.hostname[server_no], tasks::task_un_zip_build, "task_un_zip_build");
-
-	return tasks::exec_cmd(ss.str().c_str());
-}
-
-
 int central_server::find_free_server(struct str_testing_server &servers) {
 
 	int count = 0;
@@ -360,7 +359,7 @@ void central_server::test_on_localhost() {
 
 	tasks::exec_cmd("rm /project/build/testxx*");
 
-	send_build_files_to_central(0, servers, current_dir + "/project/ziptest.zip", current_dir + "/project/ziptest.zip");
+	send_build_files_to_central(0, servers, current_dir + "project/ziptest.zip", current_dir + "/project/ziptest.zip");
 
 	run_tests(0, servers);
 }

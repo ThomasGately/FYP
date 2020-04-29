@@ -105,7 +105,7 @@ string tasks::exec_task(string input) {
 	}
 }
 
-void tasks::set_dirs(string _project_dir, string _project_build_dir, string _project_list_of_tests) {
+void tasks::get_current_dir(void) {
 
     char cwd[PATH_MAX];
     if (getcwd(cwd, sizeof(cwd)) == NULL) {
@@ -113,9 +113,13 @@ void tasks::set_dirs(string _project_dir, string _project_build_dir, string _pro
         logger("get_current_dir() error");
     }
     current_dir = string(cwd);
-    project_dir = current_dir + _project_dir;
-    project_build_dir = project_dir + _project_build_dir;
-    project_list_of_tests = project_dir + _project_list_of_tests;
+}
+
+void tasks::set_dirs(string _project_dir, string _project_build_dir, string _project_list_of_tests) {
+
+    project_dir = _project_dir;
+    project_build_dir = _project_build_dir;
+    project_list_of_tests = _project_list_of_tests;
 }
 
 inline void tasks::log(int type, const char *fmt, ...) {
@@ -158,7 +162,7 @@ inline void tasks::error_logger(const char *fmt, ...) {
     va_end(args);
 }
 
-inline void tasks::openssl_logger() {
+inline void tasks::openssl_logger(void) {
 
     FILE* file;
     string filePath = current_dir + "/logs/log_" + get_current_date_time("date") + ".log";
@@ -187,7 +191,7 @@ inline string tasks::get_current_date_time(string s) {
     return string(buf);
 };
 
-void tasks::zip_files() {
+void tasks::zip_files(void) {
 
     string project_dir_build_zip = project_dir + "/ziptest.zip";
 
@@ -204,7 +208,7 @@ void tasks::zip_files() {
     zipper.close();
 }
 
-void tasks::un_zip_files() {
+void tasks::un_zip_files(void) {
 
     string project_dir_build_zip = project_dir + "/ziptest.zip";    
 
@@ -214,7 +218,7 @@ void tasks::un_zip_files() {
     unzipper.extract(project_build_dir);
 }
 
-void tasks::chmod_tsets_files() {
+void tasks::chmod_tsets_files(void) {
 
     std::ifstream list_of_tests(project_list_of_tests);
     std::string line;

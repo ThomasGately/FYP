@@ -43,6 +43,7 @@ public:
 	static string exec_task(string input);
 	static void logger(const char *fmt, ...);
 	static void error_logger(const char *fmt, ...);
+	static void get_current_dir(void);
 	static void set_dirs(string _project_dir, string _project_build_dir, string _project_list_of_tests);
 
 private:
@@ -53,11 +54,11 @@ private:
 	static string un_zip_build(string make);
 	static string run_bash_script(string bash_script);
 	static inline void log(int type, const char *fmt, ...);
-	static inline void openssl_logger();
+	static inline void openssl_logger(void);
 	static inline string get_current_date_time(string s);
-	static void zip_files();
-	static void un_zip_files();
-	static void chmod_tsets_files();
+	static void zip_files(void);
+	static void un_zip_files(void);
+	static void chmod_tsets_files(void);
 };
 
 #endif

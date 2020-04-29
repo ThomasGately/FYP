@@ -5,32 +5,37 @@
 
 .PHONY = all clean
 
+link = -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -L/usr/local/lib/ -lZipper -lz -pthread
+
 CC = gcc                        # compiler to use
 
-all: test_server test central_server
+all: tasks str_testing_server central_server test_server main
 
-test_server: src/test_server.cpp
-	@echo "------ test_server.cpp ------\n"
-	gcc -Wall -o build/test_server.out src/test_server.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -L/usr/local/lib/ -lZipper -lz
+tasks: src/tasks.cpp
+	@echo "------ src/tasks.cpp ------\n"
+	g++ -o build/tasks.o -c src/tasks.cpp $(link)
+
+str_testing_server: src/str_testing_server.cpp
+	@echo "------ str_testing_server.cpp ------\n"
+	g++ -o build/str_testing_server.o -c src/str_testing_server.cpp $(link)
 
 central_server: src/central_server.cpp
 	@echo "------ central_server.cpp ------\n"
-	gcc -Wall -o build/central_server.out src/central_server.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -pthread -L/usr/local/lib/ -lZipper -lz
+	g++ -o build/central_server.o -c src/central_server.cpp  $(link)
+
+test_server: src/test_server.cpp
+	@echo "------ test_server.cpp ------\n"
+	g++ -o build/test_server.o -c src/test_server.cpp $(link)
+
+main: src/main.cpp
+	@echo "------ main.cpp ------\n"
+	g++ -o build/main.out src/main.cpp build/tasks.o build/str_testing_server.o build/central_server.o build/test_server.o $(link)
 
 bm_central_server: src/bm_central_server.cpp
 	@echo "------ bm_central_server.cpp ------\n"
-	g++ -Wall -o build/bm_central_server.out src/bm_central_server.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -ldl -pthread -L/usr/local/lib/ -lZipper -lz -std=c++11 -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread
-
-test: src/test.cpp
-	@echo "------ test.cpp ------\n"
-	gcc -Wall -o build/test.out src/test.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -pthread -L/usr/local/lib/ -lZipper -lz
-
-openssl: src/openssl.cpp
-	@echo "------ openssl.cpp ------\n"
-	gcc -Wall -o build/openssl.out src/openssl.cpp -L/usr/lib -lssl -lcrypto -xc++ -lstdc++ -shared-libgcc -pthread
+	g++ -o build/bm_central_server.out $(link) -std=c++11 -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread
 
 clean:
 	@echo "Cleaning up..."
-	rm -rvf build/client
-	rm -rvf build/server
-	rm -rvf build/test_server
+	rm -vf build/*.out
+
