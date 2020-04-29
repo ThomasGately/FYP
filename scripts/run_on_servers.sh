@@ -4,19 +4,19 @@
 hostname=$(hostname -I 2>&1)
 
 if [[ $hostname == *"192.168.1.21"* ]]; then
-	./build/test_server.out 6969 $hostname;
+	./build/main.out test_server 6969 $hostname;
 fi
 if [[ $hostname == *"192.168.1.34"* ]]; then
-	./build/test_server.out 9001 $hostname
+	./build/main.out test_server 9001 $hostname
 fi
 if [[ $hostname == *"192.168.1.33"* ]]; then
-	./build/test_server.out 9002 $hostname
+	./build/main.out test_server 9002 $hostname
 fi
 if [[ $hostname == *"192.168.1.32"* ]]; then
-	./build/test_server.out 9003 $hostname
+	./build/main.out test_server 9003 $hostname
 fi
 if [[ $hostname == *"192.168.1.30"* ]]; then
-	./build/test_server.out 9004 $hostname
+	./build/main.out test_server 9004 $hostname
 fi
 
 
