@@ -107,130 +107,130 @@ string tasks::exec_task(string input) {
 
 void tasks::get_current_dir(void) {
 
-    char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+	char cwd[PATH_MAX];
+	if (getcwd(cwd, sizeof(cwd)) == NULL) {
 
-        logger("get_current_dir() error");
-    }
-    current_dir = string(cwd);
+		logger("get_current_dir() error");
+	}
+	current_dir = string(cwd);
 }
 
 void tasks::set_dirs(string _project_dir, string _project_build_dir, string _project_list_of_tests) {
 
-    project_dir = _project_dir;
-    project_build_dir = _project_build_dir;
-    project_list_of_tests = _project_list_of_tests;
+	project_dir = _project_dir;
+	project_build_dir = _project_build_dir;
+	project_list_of_tests = _project_list_of_tests;
 }
 
 inline void tasks::log(int type, const char *fmt, ...) {
 
-    char buffer[4096];
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    va_end(args);
-    string filePath = current_dir + "/logs/log_central_server_" + get_current_date_time("date") + ".log";
-    string now = get_current_date_time("now");
-    ofstream ofst;
-    ofst.open(filePath.c_str(), std::ios_base::out | std::ios_base::app );
+	char buffer[4096];
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(buffer, sizeof(buffer), fmt, args);
+	va_end(args);
+	string filePath = current_dir + "/logs/log_central_server_" + get_current_date_time("date") + ".log";
+	string now = get_current_date_time("now");
+	ofstream ofst;
+	ofst.open(filePath.c_str(), std::ios_base::out | std::ios_base::app );
 
-    if (!ofst) {
-        ofst.open(filePath.c_str(), fstream::out | fstream::trunc);
-    }
+	if (!ofst) {
+		ofst.open(filePath.c_str(), fstream::out | fstream::trunc);
+	}
 
-    if (DEBUG) {
-        cout << now << '\t' << buffer << '\n';
-    }
-    else if (type) {
-        cout << now << '\t' << buffer << '\n';
-    }
+	if (DEBUG) {
+		cout << now << '\t' << buffer << '\n';
+	}
+	else if (type) {
+		cout << now << '\t' << buffer << '\n';
+	}
 }
 
 inline void tasks::logger(const char *fmt, ...) {
 
-    va_list args;
-    va_start(args, fmt);
-    log(0, fmt, args);
-    va_end(args);
+	va_list args;
+	va_start(args, fmt);
+	log(0, fmt, args);
+	va_end(args);
 }
 
 inline void tasks::error_logger(const char *fmt, ...) {
 
-    va_list args;
-    va_start(args, fmt);
-    log(1, fmt, args);
-    va_end(args);
+	va_list args;
+	va_start(args, fmt);
+	log(1, fmt, args);
+	va_end(args);
 }
 
 inline void tasks::openssl_logger(void) {
 
-    FILE* file;
-    string filePath = current_dir + "/logs/log_" + get_current_date_time("date") + ".log";
-    file = fopen(filePath.c_str(), "a");
+	FILE* file;
+	string filePath = current_dir + "/logs/log_" + get_current_date_time("date") + ".log";
+	file = fopen(filePath.c_str(), "a");
 
-    if (DEBUG) {
-        ERR_print_errors_fp(stderr);
-    }
-    else {
-        ERR_print_errors_fp(file);
-    }
+	if (DEBUG) {
+		ERR_print_errors_fp(stderr);
+	}
+	else {
+		ERR_print_errors_fp(file);
+	}
 }
 
 inline string tasks::get_current_date_time(string s) {
 
-    time_t now = time(0);
-    struct tm  tstruct;
-    char  buf[80];
-    tstruct = *localtime(&now);
-    if (s == "now") {
-        strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
-    }
-    else if (s == "date"){
-        strftime(buf, sizeof(buf), "%Y-%m-%d", &tstruct);
-    }
-    return string(buf);
+	time_t now = time(0);
+	struct tm  tstruct;
+	char  buf[80];
+	tstruct = *localtime(&now);
+	if (s == "now") {
+		strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
+	}
+	else if (s == "date"){
+		strftime(buf, sizeof(buf), "%Y-%m-%d", &tstruct);
+	}
+	return string(buf);
 };
 
 void tasks::zip_files(void) {
 
-    string project_dir_build_zip = project_dir + "/ziptest.zip";
+	string project_dir_build_zip = project_dir + "/ziptest.zip";
 
-    remove(project_dir_build_zip.c_str());
+	remove(project_dir_build_zip.c_str());
 
-    logger("Makeing zip file of build --> %s", project_dir_build_zip.c_str());
+	logger("Makeing zip file of build --> %s", project_dir_build_zip.c_str());
 
-    zipper::Zipper zipper(project_dir_build_zip);
-    zipper.open();
+	zipper::Zipper zipper(project_dir_build_zip);
+	zipper.open();
 
-    logger("Adding dir --> %s", project_build_dir.c_str());
+	logger("Adding dir --> %s", project_build_dir.c_str());
 
-    zipper.add(project_build_dir);
-    zipper.close();
+	zipper.add(project_build_dir);
+	zipper.close();
 }
 
 void tasks::un_zip_files(void) {
 
-    string project_dir_build_zip = project_dir + "/ziptest.zip";    
+	string project_dir_build_zip = project_dir + "/ziptest.zip";    
 
-    logger("Unziping build --> %s", project_dir_build_zip.c_str());
+	logger("Unziping build --> %s", project_dir_build_zip.c_str());
 
-    zipper::Unzipper unzipper(project_dir_build_zip);
-    unzipper.extract(project_build_dir);
+	zipper::Unzipper unzipper(project_dir_build_zip);
+	unzipper.extract(project_build_dir);
 }
 
 void tasks::chmod_tsets_files(void) {
 
-    std::ifstream list_of_tests(project_list_of_tests);
-    std::string line;
-    std::string dir_of_test;
+	std::ifstream list_of_tests(project_list_of_tests);
+	std::string line;
+	std::string dir_of_test;
 
-    while (list_of_tests >> line) {
+	while (list_of_tests >> line) {
 
-        dir_of_test = project_build_dir + line;
+		dir_of_test = project_build_dir + line;
 
-        if (chmod(dir_of_test.c_str(), 755) == FAIL) {
+		if (chmod(dir_of_test.c_str(), 755) == FAIL) {
 
-            logger("chmod_tsets() error: file --> %s", dir_of_test.c_str());
-        }
-    }
+			logger("chmod_tsets() error: file --> %s", dir_of_test.c_str());
+		}
+	}
 }

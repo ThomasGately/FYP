@@ -225,11 +225,11 @@ void test_server::run_sockaddr(int port) {
 
 void test_server::run(int port, string _hostname) {
 
-    if(!is_root()) {
+	if(!is_root()) {
 
-        tasks::logger("This program must be run as root/sudo user!!");
-        exit(0);
-    }
+		tasks::logger("This program must be run as root/sudo user!!");
+		exit(0);
+	}
 	hostname = _hostname;
 	if (OPENSSL == true) {
 		return run_openssl(port);

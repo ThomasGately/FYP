@@ -38,4 +38,5 @@ bm_central_server: src/bm_central_server.cpp
 clean:
 	@echo "Cleaning up..."
 	rm -vf build/*.out
+	rm -vf build/*.o
 

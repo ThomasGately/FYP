@@ -18,37 +18,37 @@ int central_server::send_message_sockaddr(int port, string hostname, tasks::enum
 
 	message = ss.str();
 
-    tasks::logger("message %s", message.c_str());
+	tasks::logger("message %s", message.c_str());
  
-    int sock = 0, valread; 
-    struct sockaddr_in serv_addr; 
-    char buffer[1024] = {0}; 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
-    { 
-        printf("\n Socket creation error \n"); 
-        return -1; 
-    } 
+	int sock = 0, valread; 
+	struct sockaddr_in serv_addr; 
+	char buffer[1024] = {0}; 
+	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+	{ 
+		printf("\n Socket creation error \n"); 
+		return -1; 
+	} 
    
-    serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(port); 
-       
-    // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, hostname.c_str(), &serv_addr.sin_addr)<=0)  
-    { 
-        printf("\nInvalid address/ Address not supported \n"); 
-        return -1; 
-    } 
+	serv_addr.sin_family = AF_INET; 
+	serv_addr.sin_port = htons(port); 
+	   
+	// Convert IPv4 and IPv6 addresses from text to binary form 
+	if(inet_pton(AF_INET, hostname.c_str(), &serv_addr.sin_addr)<=0)  
+	{ 
+		printf("\nInvalid address/ Address not supported \n"); 
+		return -1; 
+	} 
    
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
-    { 
-        printf("\nConnection Failed \n"); 
-        return -1; 
-    }
-    tasks::logger("Connected with %s", hostname.c_str());
-    send(sock, message.c_str(), strlen(message.c_str()), 0); 
-    valread = read( sock , buffer, 1024); 
-    tasks::logger("Received: \"%s\"", buffer);
-    return 0; 
+	if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+	{ 
+		printf("\nConnection Failed \n"); 
+		return -1; 
+	}
+	tasks::logger("Connected with %s", hostname.c_str());
+	send(sock, message.c_str(), strlen(message.c_str()), 0); 
+	valread = read( sock , buffer, 1024); 
+	tasks::logger("Received: \"%s\"", buffer);
+	return 0; 
 }
 
 int central_server::send_message_openssl(int port, std::string hostname, tasks::enum_tasks task, std::string message) {
@@ -302,7 +302,7 @@ void central_server::run_tests_thread(vector<int> server_nos, struct str_testing
 			ss.str(string());
 		}
 		for(auto& t : thread_servers) {
-            t.join();
+			t.join();
 		}
 		thread_servers.clear();
 	}  
@@ -314,16 +314,16 @@ int central_server::find_free_server(struct str_testing_server &servers) {
 
 	while (true) {
 
-        if (servers.in_use[count] == 0) {
-        	servers.in_use[count] = 1;
-        	return count;
-        }
-        if(servers.no_of_servers - 1 == count){
-        	count = 0;
-        }
-        else {
-        	++count;
-        }
+		if (servers.in_use[count] == 0) {
+			servers.in_use[count] = 1;
+			return count;
+		}
+		if(servers.no_of_servers - 1 == count){
+			count = 0;
+		}
+		else {
+			++count;
+		}
 	}
 }
 
